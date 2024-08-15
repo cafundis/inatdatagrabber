@@ -11,6 +11,7 @@ $inatapi = 'https://api.inaturalist.org/v1/';
 $errors = [];
 $observationdata = [];
 $fileoutput = false;
+$sleeptime = 1;
 
 function make_curl_request( $url = null, $token = null, $postData = null ) {
 	global $useragent, $errors;
@@ -52,6 +53,43 @@ function make_curl_request( $url = null, $token = null, $postData = null ) {
 	}
 }
 
+function get_places( $placeids, $observationid ) {
+	global $inatapi, $errors;
+	$placelist = implode( ',', $placeids );
+	$url = $inatapi . 'places/' . $placelist . '?admin_level=0,10,20';
+	$inatdata = make_curl_request( $url );
+	if ( $inatdata && $inatdata['results'] ) {
+		$places = [];
+		foreach ( $inatdata['results'] as $place ) {
+			switch ( $place['admin_level'] ) {
+				case 0:
+					$places['country'] = $place['name'];
+					break;
+				case 10:
+					$places['state'] = $place['name'];
+					break;
+				case 20:
+					// iNat doesn't include 'County', 'Parish', etc. in the place name for US locations.
+					if ( strpos( $place['display_name'], ', US' ) === false ) {
+						$places['region'] = $place['name'];
+					} else {
+						$placenameparts = explode( ',', $place['display_name'], 2 );
+						if ( $placenameparts[0] ) {
+							$places['region'] = $placenameparts[0];
+						} else {
+							$places['region'] = $place['name'];
+						}
+					}
+					break;
+			}
+		}
+		return $places;
+	} else {
+		$errors[] = 'Location not found for observation ' . $observationid . '.';
+		return null;
+	}
+}
+
 function get_observation_data( $observationid ) {
 	global $inatapi, $errors;
 	// Initialize data
@@ -69,11 +107,16 @@ function get_observation_data( $observationid ) {
 		if ( $inatdata && $inatdata['results'] && $inatdata['results'][0] ) {
 			$results = $inatdata['results'][0];
 			// Array numbering starts at 0 so the first element is empty.
-			$data['date'] = $results['observed_on_details']['year'] . '-' . $results['observed_on_details']['month'] . '-' . $results['observed_on_details']['day'];
+			$data['date'] = $results['observed_on_details']['year'] . '-' . sprintf('%02d',$results['observed_on_details']['month']) . '-' . sprintf('%02d',$results['observed_on_details']['day']);
 			$data['collector'] = $results['user']['name'];
+			$data['username'] = $results['user']['login'];
 			$location = explode( ',', $results['location'] );
 			$data['latitude'] = $location[0];
 			$data['longitude'] = $location[1];
+			$places = get_places( $results['place_ids'], $observationid );
+			if ( $places ) {
+				$data = array_merge( $data, $places );
+			}
 			return $data;
 		} else {
 			$errors[] = 'Observation not found: ' . $observationid;
@@ -91,7 +134,7 @@ if ( $_POST ) {
 	if ( isset( $_POST['observations'] ) ) {
 		$start_time = microtime( true );
 		$fileoutput = isset( $_POST['fileoutput'] ) ? true : false;
-		$collector = isset( $_POST['collector'] ) ? true : false;
+		$username = isset( $_POST['username'] ) ? true : false;
 		$observationlist = explode( "\n", $_POST['observations'] );
 		// Limit to 96 observations.
 		$observationlist = array_slice( $observationlist, 0, 96 );
@@ -169,14 +212,18 @@ $(document).ready(function () {
 <body>
 <div id="content">
 <form id="lookupform" action="inatdatagrabber.php" method="post">
+<p>Please provide a list of iNaturalist observation numbers. These can be supplied either by pasting in a list below or uploading a csv file.</p>
 <p>
 	Observation List (1 per line, max 96):<br/><textarea rows="5" cols="50" name="observations"></textarea>
 </p>
+<p>… or …</p>
+<p><input type="file" id="observationsreport" name="observationsreport" /></p>
 <p class="dataoptions">
-	<input type="checkbox" id="fileoutput" name="fileoutput" <?php if ($fileoutput) echo "checked";?> value="yes">
+	<h3>Data Options</h3>
+	&nbsp;&nbsp;&nbsp;&nbsp;<input type="checkbox" id="fileoutput" name="fileoutput" <?php if ($fileoutput) echo "checked";?> value="yes">
 	<label for="fileoutput">Output data to csv file</label><br/>
-	<input type="checkbox" id="collector" name="collector" checked value="yes">
-	<label for="collector">Collector</label><br/>
+	&nbsp;&nbsp;&nbsp;&nbsp;<input type="checkbox" id="username" name="username" checked value="yes">
+	<label for="username">User Name</label><br/>
 </p>
 <input class="submitbtn" type="submit" />
 </form>
@@ -193,13 +240,16 @@ if ( $errors ) {
 if ( $observationdata ) {
 	if ( !$fileoutput ) {
 		print( '<table class="resulttable" border="0" cellpadding="5" cellspacing="10">' );
-		print( '<tr><th>Observation ID</th><th>Collector</th><th>Collection Date</th><th>Latitude</th><th>Longitude</th></tr>' );
+		print( '<tr><th>Observation ID</th><th>Collector</th><th>User Name</th><th>Collection Date</th><th>County</th><th>State</th><th>Latitude</th><th>Longitude</th></tr>' );
 
 		foreach ( $observationdata as $observation ) {
 			print( '<tr>' );
 				isset( $observation['observation_id'] ) ? print( '<td class="nowrap">'.$observation['observation_id'].'</td>' ) : print( '<td></td>' );
-				isset( $observation['collector'] ) && $collector ? print( '<td>'.$observation['collector'].'</td>' ) : print( '<td></td>' );
+				isset( $observation['collector'] ) ? print( '<td>'.$observation['collector'].'</td>' ) : print( '<td></td>' );
+				isset( $observation['username'] ) && $username ? print( '<td>'.$observation['username'].'</td>' ) : print( '<td></td>' );
 				isset( $observation['date'] ) ? print( '<td class="nowrap">'.$observation['date'].'</td>' ) : print( '<td></td>' );
+				isset( $observation['region'] ) ? print( '<td class="nowrap">'.$observation['region'].'</td>' ) : print( '<td></td>' );
+				isset( $observation['state'] ) ? print( '<td class="nowrap">'.$observation['state'].'</td>' ) : print( '<td></td>' );
 				isset( $observation['latitude'] ) ? print( '<td>'.$observation['latitude'].'</td>' ) : print( '<td></td>' );
 				isset( $observation['longitude'] ) ? print( '<td>'.$observation['longitude'].'</td>' ) : print( '<td></td>' );
 			print( '</tr>' );
