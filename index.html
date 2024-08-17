@@ -1,0 +1,95 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Language" content="en-us">
+	<meta charset="UTF-8">
+	<title>iNatDataGrabber</title>
+
+<style type="text/css">
+body {
+	font-family: "Trebuchet MS", Verdana, sans-serif;
+	color:#777777;
+	background: #FFFFFF;
+	}
+#content {
+	margin: 2em;
+	}
+#errors {
+	margin: 1em;
+	color: #FF6666;
+	font-weight: bold;
+	}
+p.dataoptions {
+	line-height: 1.5;
+}
+</style>
+<script src="./jquery.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function () {
+    $("#lookupform").submit(function () {
+        $(".submitbtn").attr("disabled", true);
+        return true;
+    });
+});
+</script>
+</head>
+<body>
+<div id="content">
+<form id="lookupform" action="csvdownload.php" method="post" enctype="multipart/form-data">
+<p>Please provide a list of iNaturalist observation numbers. These can be supplied either by pasting in a list below or uploading a csv file with a column named 'id'.</p>
+<p>
+	Observation List (1 per line):<br/><textarea rows="5" cols="50" name="observations"></textarea>
+</p>
+<p>… or …</p>
+<p><input type="file" id="observationsreport" name="observationsreport" /></p>
+<p class="dataoptions">
+	<h3>Data Options</h3>
+<table><tbody>
+<tr>
+<td><input type="checkbox" value="1" checked="checked" name="options[id]" id="options_id"> <label for="options_id">id</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[url]" id="options_url"> <label for="options_url">url</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[date]" id="options_date"> <label for="options_date">date</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[user_name]" id="options_user_name"> <label for="options_user_name">user name</label></div></td>
+</tr>
+<tr>
+<td><input type="checkbox" value="1" checked="checked" name="options[user_login]" id="options_user_login"> <label for="options_user_login">user login</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[description]" id="options_description"> <label for="options_description">description</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[latlon]" id="options_latlon"> <label for="options_latlon">lat/lon</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[coordinates_obscured]" id="options_coordinates_obscured"> <label for="options_coordinates_obscured">coordinates obscured</label></div></td>
+</tr>
+<tr>
+<td><input type="checkbox" value="1" checked="checked" name="options[county]" id="options_county"> <label for="options_county">county</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[state]" id="options_state"> <label for="options_state">state</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[country]" id="options_country"> <label for="options_country">country</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[scientific_name]" id="options_scientific_name"> <label for="options_scientific_name">scientific name</label></div></td>
+</tr>
+<tr>
+<td><input type="checkbox" value="1" checked="checked" name="options[phylum]" id="options_phylum"> <label for="options_phylum">phylum</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[class]" id="options_class"> <label for="options_class">class</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[order]" id="options_order"> <label for="options_order">order</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[family]" id="options_family"> <label for="options_family">family</label></div></td>
+</tr>
+<tr>
+<td><input type="checkbox" value="1" checked="checked" name="options[tribe]" id="options_tribe"> <label for="options_tribe">tribe</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[genus]" id="options_genus"> <label for="options_genus">genus</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[species]" id="options_species"> <label for="options_species">species</label></div></td>
+<td><input type="checkbox" value="1" name="options[private_latlon]" id="options_private_latlon" disabled> <label for="options_private_latlon">private lat/lon</label></div></td>
+</tr>
+<tr>
+<td><input type="checkbox" value="1" checked="checked" name="options[accession_number]" id="options_accession_number"> <label for="options_accession_number">accession number</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[fundis_tag_number]" id="options_fundis_tag_number"> <label for="options_fundis_tag_number">fundis tag number</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[microscopy_requested]" id="options_microscopy_requested"> <label for="options_microscopy_requested">microscopy requested</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[mycomap_blast_results]" id="options_mycomap_blast_results"> <label for="options_mycomap_blast_results">mycomap blast results</label></div></td>
+</tr>
+<tr>
+<td><input type="checkbox" value="1" checked="checked" name="options[mycoportal_link]" id="options_mycoportal_link"> <label for="options_mycoportal_link">mycoportal link</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[provisional_species_name]" id="options_provisional_species_name"> <label for="options_provisional_species_name">provisional species name</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[voucher_number]" id="options_voucher_number"> <label for="options_voucher_number">voucher number</label></div></td>
+<td><input type="checkbox" value="1" checked="checked" name="options[voucher_numbers]" id="options_voucher_numbers"> <label for="options_voucher_numbers">voucher numbers</label></div></td>
+</tr>
+</tbody></table>
+</p>
+<input class="submitbtn" type="submit" />
+</form>
+</div>
+</body>
+</html>
