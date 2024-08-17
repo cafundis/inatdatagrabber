@@ -4,3 +4,5 @@
 $app_id = '';
 $app_secret = '';
 $redirect_uri = '';
+$username = ''; // Your iNaturalist username
+$password = ''; // Your iNaturalist password
