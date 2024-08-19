@@ -9,6 +9,7 @@ include 'conf.php';
 $useragent = 'iNatDataGrabber/1.0';
 $inatapi = 'https://api.inaturalist.org/v1/';
 $token = null;
+$jwt = null; // JSON web token
 $errors = [];
 $observationlist = [];
 $observationdata = [];
@@ -16,24 +17,19 @@ $datarequested = [];
 //$sleeptime = 1;
 $maxrecords = 10000;
 
-function make_curl_request( $url = null, $token = null, $postData = null ) {
-	global $useragent, $errors;
+function make_curl_request( $url = null ) {
+	global $useragent, $token, $jwt, $errors;
 	$curl = curl_init();
 	if ( $curl && $url ) {
-		if ( $postData ) {
-			$curlheaders = array(
-				'Cache-Control: no-cache',
-				'Content-Type: application/json',
-				'Content-Length: ' . strlen( $postData ),
-				'Accept: application/json'
-			);
-			if ( $token ) {
-				$curlheaders[] = "Authorization: Bearer " . $token;
-			}
-			curl_setopt( $curl, CURLOPT_HTTPHEADER, $curlheaders );
-			curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, 'POST' );
-			curl_setopt( $curl, CURLOPT_POSTFIELDS, $postData );
+		$curlheaders = array(
+			'Accept: application/json'
+		);
+		if ( $jwt ) {
+			$curlheaders[] = "Authorization: " . $jwt;
+		} else if ( $token ) {
+			$curlheaders[] = "Authorization: Bearer " . $token;
 		}
+		curl_setopt( $curl, CURLOPT_HTTPHEADER, $curlheaders );
 		curl_setopt( $curl, CURLOPT_URL, $url );
 		curl_setopt( $curl, CURLOPT_USERAGENT, $useragent );
 		curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
@@ -85,11 +81,23 @@ function iNat_auth_request( $app_id, $app_secret, $username, $password, $url = '
 	}
 }
 
+function get_jwt() {
+	global $errors;
+	$url = "https://www.inaturalist.org/users/api_token";
+	$inatdata = make_curl_request( $url );
+	if ( $inatdata && $inatdata['api_token'] ) {
+		return $inatdata['api_token'];
+	} else {
+		$errors[] = 'Failed to retrieve JSON web token.';
+		return null;
+	}
+}
+
 function get_places( $placeids, $observationid ) {
-	global $inatapi, $token, $errors;
+	global $inatapi, $errors;
 	$placelist = implode( ',', $placeids );
 	$url = $inatapi . 'places/' . $placelist . '?admin_level=0,10,20';
-	$inatdata = make_curl_request( $url, $token );
+	$inatdata = make_curl_request( $url );
 	if ( $inatdata && $inatdata['results'] ) {
 		$places = [
 			'county' => null,
@@ -128,10 +136,10 @@ function get_places( $placeids, $observationid ) {
 }
 
 function get_taxonomy( $ancestorids, $observationid ) {
-	global $inatapi, $token, $errors;
+	global $inatapi, $errors;
 	$ancestorlist = implode( ',', $ancestorids );
 	$url = $inatapi . 'taxa/' . $ancestorlist;
-	$inatdata = make_curl_request( $url, $token );
+	$inatdata = make_curl_request( $url );
 	if ( $inatdata && $inatdata['results'] ) {
 		$taxonomy = [
 			'phylum' => null,
@@ -185,7 +193,7 @@ function get_ofv( $ofvs, $fieldname ) {
 }
 
 function get_observation_id( $observationkey, $keytype ) {
-	global $inatapi, $token, $errors;
+	global $inatapi, $errors;
 	$keys = [
 		'accession' => 'Accession%20Number',
 		'tag' => 'FUNDIS%20Tag%20Number',
@@ -193,7 +201,7 @@ function get_observation_id( $observationkey, $keytype ) {
 		'vouchers' => 'Voucher%20Number(s)'
 	];
 	$url = $inatapi . 'observations?field:' . $keys[$keytype] . '=' . $observationkey;
-	$inatdata = make_curl_request( $url, $token );
+	$inatdata = make_curl_request( $url );
 	if ( $inatdata && $inatdata['results'] && $inatdata['results'][0] ) {
 		return $inatdata['results'][0]['id'];
 	} else {
@@ -202,12 +210,12 @@ function get_observation_id( $observationkey, $keytype ) {
 }
 
 function get_observation_data( $observationid ) {
-	global $inatapi, $token, $errors;
+	global $inatapi, $jwt, $errors;
 	if ( $observationid && is_numeric( $observationid ) ) {
 		$data['id'] = $observationid;
 		$data['url'] = 'https://www.inaturalist.org/observations/' . $observationid;
 		$url = $inatapi . 'observations/' . $observationid;
-		$inatdata = make_curl_request( $url, $token );
+		$inatdata = make_curl_request( $url );
 		if ( $inatdata && $inatdata['results'] && $inatdata['results'][0] ) {
 			$results = $inatdata['results'][0];
 			// Array numbering starts at 0 so the first element is empty.
@@ -218,6 +226,14 @@ function get_observation_data( $observationid ) {
 			$location = explode( ',', $results['location'] );
 			$data['latitude'] = $location[0];
 			$data['longitude'] = $location[1];
+			if ( isset( $results['private_location'] ) ) {
+				$privatelocation = explode( ',', $results['private_location'] );
+				$data['private_latitude'] = $privatelocation[0];
+				$data['private_longitude'] = $privatelocation[1];
+			} else {
+				$data['private_latitude'] = null;
+				$data['private_longitude'] = null;
+			}
 			$data['coordinates_obscured'] = $results['geoprivacy'] ? 'true' : 'false';
 			$places = get_places( $results['place_ids'], $observationid );
 			if ( $places ) {
@@ -238,6 +254,15 @@ function get_observation_data( $observationid ) {
 				$data['provisional_species_name'] = get_ofv( $ofvs, 'Provisional Species Name' );
 				$data['voucher_number'] = get_ofv( $ofvs, 'Voucher Number' );
 				$data['voucher_numbers'] = get_ofv( $ofvs, 'Voucher Number(s)' );
+			} else {
+				$data['accession_number'] = null;
+				$data['fundis_tag_number'] = null;
+				$data['microscopy_requested'] = null;
+				$data['mycomap_blast_results'] = null;
+				$data['mycoportal_link'] = null;
+				$data['provisional_species_name'] = null;
+				$data['voucher_number'] = null;
+				$data['voucher_numbers'] = null;
 			}
 			return $data;
 		} else {
@@ -262,14 +287,26 @@ if ( $_POST ) {
 		];
 		$_POST['options'] = array_merge( array_slice( $_POST['options'], 0, $pos ), $temparrray, array_slice( $_POST['options'], $pos ) );
 	}
+	// Replace 'privatelatlon' with 'private_latitude' and 'private_longitude'
+	if ( isset( $_POST['options']['private_latlon'] ) ) {
+		$pos = array_search( 'private_latlon', array_keys( $_POST['options'] ) );
+		unset( $_POST['options']['private_latlon'] );
+		$temparrray = [
+			'private_latitude' => '1',
+			'private_longitude' => '1'
+		];
+		$_POST['options'] = array_merge( array_slice( $_POST['options'], 0, $pos ), $temparrray, array_slice( $_POST['options'], $pos ) );
+	}
 	// Create array of what data was requested
 	$datarequested = array_keys( $_POST['options'] );
 	$keytype = $_POST['key'];
-	if ( isset( $_POST['field'] ) ) {
+	if ( $_POST['field'] ) {
 		$field = $_POST['field'];
 	} else {
 		$field = 'id';
 	}
+	if ( $_POST['username'] ) $username = $_POST['username'];
+	if ( $_POST['password'] ) $password = $_POST['password'];
 	// If an observation list was posted, look up the data
 	if ( $_FILES && isset( $_FILES['observationsreport'] )
 		&& isset( $_FILES['observationsreport']['tmp_name'] )
@@ -296,6 +333,8 @@ if ( $_POST ) {
 		$response = iNat_auth_request( $app_id, $app_secret, $username, $password );
 		if ( $response && isset( $response['access_token'] ) ) {
 			$token = $response['access_token'];
+			// Get JSON web token
+			$jwt = get_jwt();
 			foreach ( $observationlist as $observationkey ) {
 				switch ( $keytype ) {
 					case 'id':
@@ -341,6 +380,8 @@ if ( $_POST ) {
 						break;
 				}
 			}
+		} else {
+			$errors[] = 'iNaturalist authorization request failed.';
 		}
 	}
 }
@@ -404,6 +445,7 @@ print( "Observations written to output file: " . $y . "</p>" );
 if ( $x > 0 ) {
 	print( '<p>Output file: <a href="data/inatdata.csv">inatdata.csv</a></p>' );
 }
+print( '<p>&nbsp;</p><p><a href="index.html">New Request</a></p>' );
 ?>
 </div>
 </body>

@@ -32,12 +32,23 @@ $(document).ready(function () {
         $(".submitbtn").attr("disabled", true);
         return true;
     });
+    $(".checkall").click(function () {
+	  if (this.checked) {
+		 $(".options").prop("checked", true);
+	  } else {
+		 $(".options").prop("checked", false);
+	  }	
+   });
 });
 </script>
 </head>
 <body>
 <div id="content">
 <form id="lookupform" action="inatdatagrabber.php" method="post" enctype="multipart/form-data">
+<h3>Authentication</h3>
+<p>If you want to download private data, for example, obscured locations, enter your iNaturalist username and password. These will not be stored on the server.</p>
+<p>Username: <input type="text" id="username" name="username"/></p>
+<p>Password: <input type="password" id="password" name="password"/></p>
 <h3>Data Processing</h3>
 <p>
 Identify observations by the following key: 
@@ -50,56 +61,57 @@ Identify observations by the following key:
 </p>
 <h3>Data Input</h3>
 <p>
-	Observation List (1 per line):<br/><textarea rows="5" cols="50" name="observations"></textarea>
+	Observation List (1 per line):<br/><textarea rows="5" cols="30" name="observations"></textarea>
 </p>
 <p>… or …</p>
 <p>Upload csv file: <input type="file" id="observationsreport" name="observationsreport" /></p>
 <p>Field name for key: <input type="text" id="field" name="field"/></p>
 <h3>Output Options</h3>
 <p>Choose which fields to include in the output csv file:</p>
+<p><input type="checkbox" name="checkall" class="checkall" checked="checked"> all fields</p>
 <p class="outputoptions">
 <table><tbody>
 <tr>
-<td><input type="checkbox" value="1" checked="checked" name="options[id]" id="options_id"> <label for="options_id">id</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[url]" id="options_url"> <label for="options_url">url</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[date]" id="options_date"> <label for="options_date">date</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[user_name]" id="options_user_name"> <label for="options_user_name">user name</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[id]" id="options_id"> <label for="options_id">id</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[url]" id="options_url"> <label for="options_url">url</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[date]" id="options_date"> <label for="options_date">date</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[user_name]" id="options_user_name"> <label for="options_user_name">user name</label></div></td>
 </tr>
 <tr>
-<td><input type="checkbox" value="1" checked="checked" name="options[user_login]" id="options_user_login"> <label for="options_user_login">user login</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[description]" id="options_description"> <label for="options_description">description</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[latlon]" id="options_latlon"> <label for="options_latlon">lat/lon</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[coordinates_obscured]" id="options_coordinates_obscured"> <label for="options_coordinates_obscured">coordinates obscured</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[user_login]" id="options_user_login"> <label for="options_user_login">user login</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[description]" id="options_description"> <label for="options_description">description</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[latlon]" id="options_latlon"> <label for="options_latlon">lat/lon</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[private_latlon]" id="options_private_latlon"> <label for="options_private_latlon">private lat/lon</label></div></td>
 </tr>
 <tr>
-<td><input type="checkbox" value="1" checked="checked" name="options[county]" id="options_county"> <label for="options_county">county</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[state]" id="options_state"> <label for="options_state">state</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[country]" id="options_country"> <label for="options_country">country</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[scientific_name]" id="options_scientific_name"> <label for="options_scientific_name">scientific name</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[coordinates_obscured]" id="options_coordinates_obscured"> <label for="options_coordinates_obscured">coordinates obscured</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[county]" id="options_county"> <label for="options_county">county</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[state]" id="options_state"> <label for="options_state">state</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[country]" id="options_country"> <label for="options_country">country</label></div></td>
 </tr>
 <tr>
-<td><input type="checkbox" value="1" checked="checked" name="options[phylum]" id="options_phylum"> <label for="options_phylum">phylum</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[class]" id="options_class"> <label for="options_class">class</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[order]" id="options_order"> <label for="options_order">order</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[family]" id="options_family"> <label for="options_family">family</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[scientific_name]" id="options_scientific_name"> <label for="options_scientific_name">scientific name</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[phylum]" id="options_phylum"> <label for="options_phylum">phylum</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[class]" id="options_class"> <label for="options_class">class</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[order]" id="options_order"> <label for="options_order">order</label></div></td>
 </tr>
 <tr>
-<td><input type="checkbox" value="1" checked="checked" name="options[tribe]" id="options_tribe"> <label for="options_tribe">tribe</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[genus]" id="options_genus"> <label for="options_genus">genus</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[species]" id="options_species"> <label for="options_species">species</label></div></td>
-<td><input type="checkbox" value="1" name="options[private_latlon]" id="options_private_latlon" disabled> <label for="options_private_latlon">private lat/lon</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[family]" id="options_family"> <label for="options_family">family</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[tribe]" id="options_tribe"> <label for="options_tribe">tribe</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[genus]" id="options_genus"> <label for="options_genus">genus</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[species]" id="options_species"> <label for="options_species">species</label></div></td>
 </tr>
 <tr>
-<td><input type="checkbox" value="1" checked="checked" name="options[accession_number]" id="options_accession_number"> <label for="options_accession_number">accession number</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[fundis_tag_number]" id="options_fundis_tag_number"> <label for="options_fundis_tag_number">fundis tag number</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[microscopy_requested]" id="options_microscopy_requested"> <label for="options_microscopy_requested">microscopy requested</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[mycomap_blast_results]" id="options_mycomap_blast_results"> <label for="options_mycomap_blast_results">mycomap blast results</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[accession_number]" id="options_accession_number"> <label for="options_accession_number">accession number</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[fundis_tag_number]" id="options_fundis_tag_number"> <label for="options_fundis_tag_number">fundis tag number</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[microscopy_requested]" id="options_microscopy_requested"> <label for="options_microscopy_requested">microscopy requested</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[mycomap_blast_results]" id="options_mycomap_blast_results"> <label for="options_mycomap_blast_results">mycomap blast results</label></div></td>
 </tr>
 <tr>
-<td><input type="checkbox" value="1" checked="checked" name="options[mycoportal_link]" id="options_mycoportal_link"> <label for="options_mycoportal_link">mycoportal link</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[provisional_species_name]" id="options_provisional_species_name"> <label for="options_provisional_species_name">provisional species name</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[voucher_number]" id="options_voucher_number"> <label for="options_voucher_number">voucher number</label></div></td>
-<td><input type="checkbox" value="1" checked="checked" name="options[voucher_numbers]" id="options_voucher_numbers"> <label for="options_voucher_numbers">voucher number(s)</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[mycoportal_link]" id="options_mycoportal_link"> <label for="options_mycoportal_link">mycoportal link</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[provisional_species_name]" id="options_provisional_species_name"> <label for="options_provisional_species_name">provisional species name</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[voucher_number]" id="options_voucher_number"> <label for="options_voucher_number">voucher number</label></div></td>
+<td><input type="checkbox" class="options" value="1" checked="checked" name="options[voucher_numbers]" id="options_voucher_numbers"> <label for="options_voucher_numbers">voucher number(s)</label></div></td>
 </tr>
 </tbody></table>
 </p>
