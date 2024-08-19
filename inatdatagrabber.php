@@ -184,16 +184,21 @@ function get_ofv( $ofvs, $fieldname ) {
 	return null;
 }
 
-function get_observations( $fileData ) {
-	global $errors;
-	$observationNumbers = [];
-	$observations = explode( "\n", $fileData );
-	foreach( $observations as $observation ) {
-		if ( preg_match( '/[0-9]{9,10}/', $observation, $matches ) ) {
-			$observationNumbers[] = $matches[0];
-		}
+function get_observation_id( $observationkey, $keytype ) {
+	global $inatapi, $token, $errors;
+	$keys = [
+		'accession' => 'Accession%20Number',
+		'tag' => 'FUNDIS%20Tag%20Number',
+		'voucher' => 'Voucher%20Number',
+		'vouchers' => 'Voucher%20Number(s)'
+	];
+	$url = $inatapi . 'observations?field:' . $keys[$keytype] . '=' . $observationkey;
+	$inatdata = make_curl_request( $url, $token );
+	if ( $inatdata && $inatdata['results'] && $inatdata['results'][0] ) {
+		return $inatdata['results'][0]['id'];
+	} else {
+		return null;
 	}
-	return $observationNumbers;
 }
 
 function get_observation_data( $observationid ) {
@@ -236,7 +241,7 @@ function get_observation_data( $observationid ) {
 			}
 			return $data;
 		} else {
-			$errors[] = 'Observation not found: ' . $observationid;
+			$errors[] = 'Observation not found for observation ID ' . $observationid;
 			return null;
 		}
 	} else {
@@ -247,7 +252,6 @@ function get_observation_data( $observationid ) {
 
 // See if form was submitted.
 if ( $_POST ) {
-	// Build array of what data was requested
 	// Replace 'latlon' with 'latitude' and 'longitude'
 	if ( isset( $_POST['options']['latlon'] ) ) {
 		$pos = array_search( 'latlon', array_keys( $_POST['options'] ) );
@@ -258,18 +262,27 @@ if ( $_POST ) {
 		];
 		$_POST['options'] = array_merge( array_slice( $_POST['options'], 0, $pos ), $temparrray, array_slice( $_POST['options'], $pos ) );
 	}
+	// Create array of what data was requested
 	$datarequested = array_keys( $_POST['options'] );
-	// If an observation ID was posted, look up the data.
+	$keytype = $_POST['key'];
+	if ( isset( $_POST['field'] ) ) {
+		$field = $_POST['field'];
+	} else {
+		$field = 'id';
+	}
+	// If an observation list was posted, look up the data
 	if ( $_FILES && isset( $_FILES['observationsreport'] )
 		&& isset( $_FILES['observationsreport']['tmp_name'] )
 		&& $_FILES['observationsreport']['tmp_name'] !== '' )
 	{
 		$tmpName = $_FILES['observationsreport']['tmp_name'];
+		// Put all the data into arrays based on the column
 		$rows = array_map( 'str_getcsv', file( $tmpName ) );
 		$header = array_shift( $rows );
 		foreach ( $rows as $row ) {
 			$indexed = array_combine( $header, $row );
-			$observationlist[] = $indexed['id'];
+			// Build an observation list array based on the specified key field
+			$observationlist[] = $indexed[$field];
 		}
 	}
 	if ( isset( $_POST['observations'] ) && $_POST['observations'] ) {
@@ -283,44 +296,54 @@ if ( $_POST ) {
 		$response = iNat_auth_request( $app_id, $app_secret, $username, $password );
 		if ( $response && isset( $response['access_token'] ) ) {
 			$token = $response['access_token'];
-			foreach ( $observationlist as $observationid ) {
-				if ( preg_match( '/\d+/', $observationid, $matches ) ) {
-					$observationid = $matches[0];
-					$observationdata[] = get_observation_data( $observationid );
-				} else {
-					$errors[] = 'Invalid observation number: ' . $observationid;
-					$observationdata[] = null;
+			foreach ( $observationlist as $observationkey ) {
+				switch ( $keytype ) {
+					case 'id':
+						if ( preg_match( '/\d+/', $observationkey, $matches ) ) {
+							$observationid = $matches[0];
+							$observationdata[] = get_observation_data( $observationid );
+						} else {
+							$errors[] = 'Observation ID not valid:' . $observationkey;
+							$observationdata[] = null;
+						}
+						break;
+					case 'accession':
+						$observationid = get_observation_id( $observationkey, 'accession' );
+						if ( $observationid ) {
+							$observationdata[] = get_observation_data( $observationid );
+						} else {
+							$errors[] = 'Observation not found for accession number ' . $observationkey;
+							$observationdata[] = null;
+						}
+						break;
+					case 'tag':
+						$observationid = get_observation_id( $observationkey, 'tag' );
+						if ( $observationid ) {
+							$observationdata[] = get_observation_data( $observationid );
+						} else {
+							$errors[] = 'Observation not found for FUNDIS tag number ' . $observationkey;
+							$observationdata[] = null;
+						}
+						break;
+					case 'voucher':
+						$observationid = get_observation_id( $observationkey, 'voucher' );
+						if ( $observationid ) {
+							$observationdata[] = get_observation_data( $observationid );
+						} else {
+							$observationid = get_observation_id( $observationkey, 'vouchers' );
+							if ( $observationid ) {
+								$observationdata[] = get_observation_data( $observationid );
+							} else {
+								$errors[] = 'Observation not found for voucher number ' . $observationkey;
+								$observationdata[] = null;
+							}
+						}
+						break;
 				}
-				/*
-				if ( count( $observationlist ) > 1 ) {
-					sleep( $sleeptime );
-				}
-				*/
 			}
 		}
 	}
 }
-if ( $observationdata ) {
-	// Open the output stream
-	$fh = fopen( 'php://output', 'w' );
-	// Start output buffering (to capture stream contents)
-	ob_start();
-	// OUTPUT CSV headings
-	fputcsv( $fh, $datarequested );
-	// Loop over the $observationdata to export
-	if ( ! empty( $observationdata ) ) {
-		foreach ( $observationdata as $observation ) {
-			$observation = array_intersect_key( $observation, array_fill_keys( $datarequested, null ) );
-			fputcsv( $fh, $observation );
-		}
-	}
-	// Get the contents of the output buffer
-	$string = ob_get_clean();
-	header('Content-type: text/plain');
-	header('Content-Disposition: attachment; filename="inatdata.csv"');
-	header('Content-Transfer-Encoding: binary');
-	exit( $string );
-} else {
 ?>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -347,6 +370,27 @@ body {
 <body>
 <div id="content">
 <?php
+$x = 0;
+$y = 0;
+if ( $observationdata ) {
+	$fh = fopen( './data/inatdata.csv', 'w' );
+	if ( $fh ) {
+		fputcsv( $fh, $datarequested );
+		// Filter observations for only the requested data.
+		foreach ( $observationdata as $observation ) {
+			if ( $observation && is_array( $observation ) ) {
+				$observation = array_intersect_key( $observation, array_fill_keys( $datarequested, null ) );
+				if ( $observation && is_array( $observation ) ) {
+					fputcsv( $fh, $observation );
+					$y++;
+				}
+			}
+			$x++;
+		}
+	} else {
+		$errors[] = 'File is not writable. Please check permissions.';
+	}
+}
 if ( $errors ) {
 	print( '<p id="errors">' );
 	print( 'Errors:<br/>' );
@@ -355,9 +399,12 @@ if ( $errors ) {
 	}
 	print( '</p>' );
 }
+print( "<p>Observations processed: " . $x . "<br>" );
+print( "Observations written to output file: " . $y . "</p>" );
+if ( $x > 0 ) {
+	print( '<p>Output file: <a href="data/inatdata.csv">inatdata.csv</a></p>' );
+}
 ?>
 </div>
 </body>
 </html>
-<?php
-}

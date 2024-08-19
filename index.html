@@ -18,7 +18,10 @@ body {
 	color: #FF6666;
 	font-weight: bold;
 	}
-p.dataoptions {
+p {
+	margin: 1em 2em;
+}
+p.outputoptions {
 	line-height: 1.5;
 }
 </style>
@@ -34,15 +37,27 @@ $(document).ready(function () {
 </head>
 <body>
 <div id="content">
-<form id="lookupform" action="csvdownload.php" method="post" enctype="multipart/form-data">
-<p>Please provide a list of iNaturalist observation numbers. These can be supplied either by pasting in a list below or uploading a csv file with a column named 'id'.</p>
+<form id="lookupform" action="inatdatagrabber.php" method="post" enctype="multipart/form-data">
+<h3>Data Processing</h3>
+<p>
+Identify observations by the following key: 
+<select name="key" id="key">
+  <option value="id">iNaturalist observation ID</option>
+  <option value="accession">Accession number</option>
+  <option value="tag">FUNDIS tag number</option>
+  <option value="voucher">Voucher number</option>
+</select>
+</p>
+<h3>Data Input</h3>
 <p>
 	Observation List (1 per line):<br/><textarea rows="5" cols="50" name="observations"></textarea>
 </p>
 <p>… or …</p>
-<p><input type="file" id="observationsreport" name="observationsreport" /></p>
-<p class="dataoptions">
-	<h3>Data Options</h3>
+<p>Upload csv file: <input type="file" id="observationsreport" name="observationsreport" /></p>
+<p>Field name for key: <input type="text" id="field" name="field"/></p>
+<h3>Output Options</h3>
+<p>Choose which fields to include in the output csv file:</p>
+<p class="outputoptions">
 <table><tbody>
 <tr>
 <td><input type="checkbox" value="1" checked="checked" name="options[id]" id="options_id"> <label for="options_id">id</label></div></td>
@@ -88,6 +103,7 @@ $(document).ready(function () {
 </tr>
 </tbody></table>
 </p>
+<!--<p><input type="checkbox" value="1" name="debug" id="debug"> <label for="debug">debug</label></div></p>-->
 <input class="submitbtn" type="submit" />
 </form>
 </div>
