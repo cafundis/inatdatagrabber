@@ -347,7 +347,7 @@ if ( $_POST ) {
 						if ( preg_match( '/\d+/', $observationkey, $matches ) ) {
 							$observationlistclean[] = $matches[0];
 						} else {
-							$errors[] = 'Observation ID not valid:' . $observationkey;
+							$errors[] = 'Observation ID not valid: ' . $observationkey;
 						}
 						break;
 					case 'accession':
