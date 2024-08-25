@@ -11,11 +11,12 @@ $inatapi = 'https://api.inaturalist.org/v1/';
 $token = null;
 $jwt = null; // JSON web token
 $errors = [];
-$observationlist = [];
+$observationlist = []; // Array of submitted observation keys
+$observationlistclean = []; // Array of iNaturalist observation IDs
 $observationdata = [];
 $datarequested = [];
 //$sleeptime = 1;
-$maxrecords = 10000;
+$maxrecords = 200; // Per API limit
 
 function make_curl_request( $url = null ) {
 	global $useragent, $token, $jwt, $errors;
@@ -209,69 +210,70 @@ function get_observation_id( $observationkey, $keytype ) {
 	}
 }
 
-function get_observation_data( $observationid ) {
+function get_observation_data( $observationlistclean ) {
 	global $inatapi, $jwt, $errors;
-	if ( $observationid && is_numeric( $observationid ) ) {
-		$data['id'] = $observationid;
-		$data['url'] = 'https://www.inaturalist.org/observations/' . $observationid;
-		$url = $inatapi . 'observations/' . $observationid;
+	if ( $observationlistclean ) {
+		$allobservationdata = [];
+		$observationliststring = implode( ",", $observationlistclean );
+		$url = $inatapi . 'observations/' . $observationliststring;
 		$inatdata = make_curl_request( $url );
 		if ( $inatdata && $inatdata['results'] && $inatdata['results'][0] ) {
-			$results = $inatdata['results'][0];
-			// Array numbering starts at 0 so the first element is empty.
-			$data['date'] = $results['observed_on_details']['year'] . '-' . sprintf('%02d',$results['observed_on_details']['month']) . '-' . sprintf('%02d',$results['observed_on_details']['day']);
-			$data['user_name'] = $results['user']['name'];
-			$data['user_login'] = $results['user']['login'];
-			$data['description'] = $results['description'];
-			$location = explode( ',', $results['location'] );
-			$data['latitude'] = $location[0];
-			$data['longitude'] = $location[1];
-			if ( isset( $results['private_location'] ) ) {
-				$privatelocation = explode( ',', $results['private_location'] );
-				$data['private_latitude'] = $privatelocation[0];
-				$data['private_longitude'] = $privatelocation[1];
-			} else {
-				$data['private_latitude'] = null;
-				$data['private_longitude'] = null;
+			foreach ( $inatdata['results'] as $result ) {
+				$data = [];
+				$data['id'] = $result['id'];
+				$data['url'] = 'https://www.inaturalist.org/observations/' . $result['id'];
+				$data['date'] = $result['observed_on_details']['date'];
+				$data['user_name'] = $result['user']['name'];
+				$data['user_login'] = $result['user']['login'];
+				$data['description'] = $result['description'];
+				$location = explode( ',', $result['location'] );
+				$data['latitude'] = $location[0];
+				$data['longitude'] = $location[1];
+				if ( isset( $result['private_location'] ) ) {
+					$privatelocation = explode( ',', $result['private_location'] );
+					$data['private_latitude'] = $privatelocation[0];
+					$data['private_longitude'] = $privatelocation[1];
+				} else {
+					$data['private_latitude'] = null;
+					$data['private_longitude'] = null;
+				}
+				$data['coordinates_obscured'] = $result['geoprivacy'] ? 'true' : 'false';
+				$places = get_places( $result['place_ids'], $result['id'] );
+				if ( $places ) {
+					$data = array_merge( $data, $places );
+				}
+				$data['scientific_name'] = $result['taxon']['name'];
+				$taxonomy = get_taxonomy( $result['taxon']['ancestor_ids'], $result['id'] );
+				if ( $taxonomy ) {
+					$data = array_merge( $data, $taxonomy );
+				}
+				if ( isset( $result['ofvs'] ) ) {
+					$ofvs = $result['ofvs'];
+					$data['accession_number'] = get_ofv( $ofvs, 'Accession Number' );
+					$data['fundis_tag_number'] = get_ofv( $ofvs, 'FUNDIS Tag Number' );
+					$data['microscopy_requested'] = get_ofv( $ofvs, 'Microscopy Requested' );
+					$data['mycomap_blast_results'] = get_ofv( $ofvs, 'MycoMap BLAST Results' );
+					$data['mycoportal_link'] = get_ofv( $ofvs, 'MyCoPortal Link' );
+					$data['provisional_species_name'] = get_ofv( $ofvs, 'Provisional Species Name' );
+					$data['voucher_number'] = get_ofv( $ofvs, 'Voucher Number' );
+					$data['voucher_numbers'] = get_ofv( $ofvs, 'Voucher Number(s)' );
+				} else {
+					$data['accession_number'] = null;
+					$data['fundis_tag_number'] = null;
+					$data['microscopy_requested'] = null;
+					$data['mycomap_blast_results'] = null;
+					$data['mycoportal_link'] = null;
+					$data['provisional_species_name'] = null;
+					$data['voucher_number'] = null;
+					$data['voucher_numbers'] = null;
+				}
+				$allobservationdata[] = $data;
 			}
-			$data['coordinates_obscured'] = $results['geoprivacy'] ? 'true' : 'false';
-			$places = get_places( $results['place_ids'], $observationid );
-			if ( $places ) {
-				$data = array_merge( $data, $places );
-			}
-			$data['scientific_name'] = $results['taxon']['name'];
-			$taxonomy = get_taxonomy( $results['taxon']['ancestor_ids'], $observationid );
-			if ( $taxonomy ) {
-				$data = array_merge( $data, $taxonomy );
-			}
-			if ( isset( $results['ofvs'] ) ) {
-				$ofvs = $results['ofvs'];
-				$data['accession_number'] = get_ofv( $ofvs, 'Accession Number' );
-				$data['fundis_tag_number'] = get_ofv( $ofvs, 'FUNDIS Tag Number' );
-				$data['microscopy_requested'] = get_ofv( $ofvs, 'Microscopy Requested' );
-				$data['mycomap_blast_results'] = get_ofv( $ofvs, 'MycoMap BLAST Results' );
-				$data['mycoportal_link'] = get_ofv( $ofvs, 'MyCoPortal Link' );
-				$data['provisional_species_name'] = get_ofv( $ofvs, 'Provisional Species Name' );
-				$data['voucher_number'] = get_ofv( $ofvs, 'Voucher Number' );
-				$data['voucher_numbers'] = get_ofv( $ofvs, 'Voucher Number(s)' );
-			} else {
-				$data['accession_number'] = null;
-				$data['fundis_tag_number'] = null;
-				$data['microscopy_requested'] = null;
-				$data['mycomap_blast_results'] = null;
-				$data['mycoportal_link'] = null;
-				$data['provisional_species_name'] = null;
-				$data['voucher_number'] = null;
-				$data['voucher_numbers'] = null;
-			}
-			return $data;
+			return $allobservationdata;
 		} else {
-			$errors[] = 'Observation not found for observation ID ' . $observationid;
-			return null;
+			$errors[] = 'No observations found via iNaturalist API.';
+			return [];
 		}
-	} else {
-		$errors[] = 'No valid observation ID provided.';
-		return null;
 	}
 }
 
@@ -329,6 +331,10 @@ if ( $_POST ) {
 	if ( $observationlist ) {
 		// Limit to $maxrecords observations.
 		$observationlist = array_slice( $observationlist, 0, $maxrecords );
+		// Trim whitespace from all observation keys.
+		$observationlist = array_map( 'trim', $observationlist );
+		// Remove any empty keys.
+		$observationlist = array_filter($observationlist);
 		// Get iNat auth token
 		$response = iNat_auth_request( $app_id, $app_secret, $username, $password );
 		if ( $response && isset( $response['access_token'] ) ) {
@@ -339,46 +345,44 @@ if ( $_POST ) {
 				switch ( $keytype ) {
 					case 'id':
 						if ( preg_match( '/\d+/', $observationkey, $matches ) ) {
-							$observationid = $matches[0];
-							$observationdata[] = get_observation_data( $observationid );
+							$observationlistclean[] = $matches[0];
 						} else {
 							$errors[] = 'Observation ID not valid:' . $observationkey;
-							$observationdata[] = null;
 						}
 						break;
 					case 'accession':
 						$observationid = get_observation_id( $observationkey, 'accession' );
 						if ( $observationid ) {
-							$observationdata[] = get_observation_data( $observationid );
+							$observationlistclean[] = $observationid;
 						} else {
 							$errors[] = 'Observation not found for accession number ' . $observationkey;
-							$observationdata[] = null;
 						}
 						break;
 					case 'tag':
 						$observationid = get_observation_id( $observationkey, 'tag' );
 						if ( $observationid ) {
-							$observationdata[] = get_observation_data( $observationid );
+							$observationlistclean[] = $observationid;
 						} else {
 							$errors[] = 'Observation not found for FUNDIS tag number ' . $observationkey;
-							$observationdata[] = null;
 						}
 						break;
 					case 'voucher':
 						$observationid = get_observation_id( $observationkey, 'voucher' );
 						if ( $observationid ) {
-							$observationdata[] = get_observation_data( $observationid );
+							$observationlistclean[] = $observationid;
 						} else {
 							$observationid = get_observation_id( $observationkey, 'vouchers' );
 							if ( $observationid ) {
-								$observationdata[] = get_observation_data( $observationid );
+								$observationlistclean[] = $observationid;
 							} else {
 								$errors[] = 'Observation not found for voucher number ' . $observationkey;
-								$observationdata[] = null;
 							}
 						}
 						break;
 				}
+			}
+			if ( $observationlistclean ) {
+				$observationdata = get_observation_data( $observationlistclean );
 			}
 		} else {
 			$errors[] = 'iNaturalist authorization request failed.';
@@ -411,22 +415,21 @@ body {
 <body>
 <div id="content">
 <?php
-$x = 0;
-$y = 0;
+$observationsfound = [];
 if ( $observationdata ) {
 	$fh = fopen( './data/inatdata.csv', 'w' );
 	if ( $fh ) {
+		// Write csv headers
 		fputcsv( $fh, $datarequested );
-		// Filter observations for only the requested data.
 		foreach ( $observationdata as $observation ) {
 			if ( $observation && is_array( $observation ) ) {
-				$observation = array_intersect_key( $observation, array_fill_keys( $datarequested, null ) );
-				if ( $observation && is_array( $observation ) ) {
-					fputcsv( $fh, $observation );
-					$y++;
+				// Filter observations for only the requested data.
+				$observationfiltered = array_intersect_key( $observation, array_fill_keys( $datarequested, null ) );
+				if ( $observationfiltered && is_array( $observationfiltered ) ) {
+					fputcsv( $fh, $observationfiltered );
+					$observationsfound[] = $observation['id'];
 				}
 			}
-			$x++;
 		}
 	} else {
 		$errors[] = 'File is not writable. Please check permissions.';
@@ -440,9 +443,13 @@ if ( $errors ) {
 	}
 	print( '</p>' );
 }
-print( "<p>Observations processed: " . $x . "<br>" );
-print( "Observations written to output file: " . $y . "</p>" );
-if ( $x > 0 ) {
+print( "<p>Observations processed: " . count($observationlist) . "<br>" );
+print( "Observations written to output file: " . count($observationsfound) . "</p>" );
+if ( count($observationlistclean) !== count($observationsfound) ) {
+	$observationsnotfound = array_diff( $observationlistclean, $observationsfound );
+	print( '<p>These observation IDs returned no data: ' . implode( ', ', $observationsnotfound ) . '</p>' );
+}
+if ( count($observationsfound) > 0 ) {
 	print( '<p>Output file: <a href="data/inatdata.csv">inatdata.csv</a></p>' );
 }
 print( '<p>&nbsp;</p><p><a href="index.html">New Request</a></p>' );
