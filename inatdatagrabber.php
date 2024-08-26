@@ -257,6 +257,9 @@ function get_observation_data( $observationlist ) {
 					$data['provisional_species_name'] = get_ofv( $ofvs, 'Provisional Species Name' );
 					$data['voucher_number'] = get_ofv( $ofvs, 'Voucher Number' );
 					$data['voucher_numbers'] = get_ofv( $ofvs, 'Voucher Number(s)' );
+					$data['dna_barcode_its'] = get_ofv( $ofvs, 'DNA Barcode ITS' );
+					$data['dna_barcode_its_2'] = get_ofv( $ofvs, 'DNA Barcode ITS #2' );
+					$data['dna_barcode_lsu'] = get_ofv( $ofvs, 'DNA Barcode LSU' );
 				} else {
 					$data['accession_number'] = null;
 					$data['fundis_tag_number'] = null;
@@ -266,6 +269,9 @@ function get_observation_data( $observationlist ) {
 					$data['provisional_species_name'] = null;
 					$data['voucher_number'] = null;
 					$data['voucher_numbers'] = null;
+					$data['dna_barcode_its'] = null;
+					$data['dna_barcode_its_2'] = null;
+					$data['dna_barcode_lsu'] = null;
 				}
 				$allobservationdata[] = $data;
 			}
