@@ -15,8 +15,8 @@ $observationlist = []; // Array of submitted observation keys
 $observationlistclean = []; // Array of iNaturalist observation IDs
 $observationdata = [];
 $datarequested = [];
-//$sleeptime = 1;
-$maxrecords = 200; // Per API limit
+$maxrecords = 10000; // Per https://www.inaturalist.org/pages/api+recommended+practices
+$maxrecordsperrequest = 200; // Per v1 API limit
 
 function make_curl_request( $url = null ) {
 	global $useragent, $token, $jwt, $errors;
@@ -210,11 +210,11 @@ function get_observation_id( $observationkey, $keytype ) {
 	}
 }
 
-function get_observation_data( $observationlistclean ) {
+function get_observation_data( $observationlist ) {
 	global $inatapi, $jwt, $errors;
-	if ( $observationlistclean ) {
+	if ( $observationlist ) {
 		$allobservationdata = [];
-		$observationliststring = implode( ",", $observationlistclean );
+		$observationliststring = implode( ",", $observationlist );
 		$url = $inatapi . 'observations/' . $observationliststring;
 		$inatdata = make_curl_request( $url );
 		if ( $inatdata && $inatdata['results'] && $inatdata['results'][0] ) {
@@ -341,6 +341,7 @@ if ( $_POST ) {
 			$token = $response['access_token'];
 			// Get JSON web token
 			$jwt = get_jwt();
+			// Convert the observation list into a list of iNaturalist observation IDs
 			foreach ( $observationlist as $observationkey ) {
 				switch ( $keytype ) {
 					case 'id':
@@ -382,7 +383,13 @@ if ( $_POST ) {
 				}
 			}
 			if ( $observationlistclean ) {
-				$observationdata = get_observation_data( $observationlistclean );
+				// Split into chunks for batched requests
+				$chunkedobservationlist = array_chunk( $observationlistclean, $maxrecordsperrequest );
+				foreach ( $chunkedobservationlist as $observationlistchunk ) {
+					$observationdata[] = get_observation_data( $observationlistchunk );
+				}
+				// Merge the chunks back together
+				$observationdata = array_merge( ...$observationdata );
 			}
 		} else {
 			$errors[] = 'iNaturalist authorization request failed.';
