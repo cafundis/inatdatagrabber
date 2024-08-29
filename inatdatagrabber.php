@@ -16,7 +16,7 @@ $observationlistclean = []; // Array of iNaturalist observation IDs
 $observationdata = [];
 $datarequested = [];
 $maxrecords = 10000; // Per https://www.inaturalist.org/pages/api+recommended+practices
-$maxrecordsperrequest = 200; // Per v1 API limit
+$maxrecordsperrequest = 30; // Per v1 API limit
 
 function make_curl_request( $url = null ) {
 	global $useragent, $token, $jwt, $errors;
@@ -284,6 +284,25 @@ function get_observation_data( $observationlist ) {
 	}
 }
 
+function get_observation_list( $filename='', $field ) {
+	if( !file_exists($filename) || !is_readable($filename) ) return false;
+	$header = null;
+	$indexeddata = [];
+	$observationlist = [];
+	if ( ( $handle = fopen( $filename, 'r' ) ) !== false ) {
+		while ( ( $row = fgetcsv( $handle, 0, ',' ) ) !== false ) {
+			if( !$header ) {
+				$header = $row;
+			} else {
+				$indexeddata = array_combine( $header, $row );
+				$observationlist[] = $indexeddata[$field];
+			}
+		}
+		fclose($handle);
+	}
+	return $observationlist;
+}
+
 // See if form was submitted.
 if ( $_POST ) {
 	// Replace 'latlon' with 'latitude' and 'longitude'
@@ -322,19 +341,7 @@ if ( $_POST ) {
 		&& $_FILES['observationsreport']['tmp_name'] !== '' )
 	{
 		$tmpName = $_FILES['observationsreport']['tmp_name'];
-		// Put all the data into arrays based on the column
-		$rows = array_map( 'str_getcsv', file( $tmpName ) );
-		$header = array_shift( $rows );
-		foreach ( $rows as $key => $row ) {
-			if ( count($header) === count($row) ) {
-				$indexed = array_combine( $header, $row );
-				// Build an observation list array based on the specified key field
-				$observationlist[] = $indexed[$field];
-			} else {
-				// Add 2 since the array starts at 0 and we did an array_shift
-				$errors[] = 'Line ' . ($key + 2) . ' has wrong number of fields in CSV file.';
-			}
-		}
+		$observationlist = get_observation_list( $tmpName, $field );
 	}
 	if ( isset( $_POST['observations'] ) && $_POST['observations'] ) {
 		$observationsfromtextarea = explode( "\n", $_POST['observations'] );
