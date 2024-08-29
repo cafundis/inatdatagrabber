@@ -16,7 +16,7 @@ $observationlistclean = []; // Array of iNaturalist observation IDs
 $observationdata = [];
 $datarequested = [];
 $maxrecords = 10000; // Per https://www.inaturalist.org/pages/api+recommended+practices
-$maxrecordsperrequest = 30; // Per v1 API limit
+$maxrecordsperrequest = 200; // Per v1 API limit
 
 function make_curl_request( $url = null ) {
 	global $useragent, $token, $jwt, $errors;
@@ -215,7 +215,7 @@ function get_observation_data( $observationlist ) {
 	if ( $observationlist ) {
 		$allobservationdata = [];
 		$observationliststring = implode( ",", $observationlist );
-		$url = $inatapi . 'observations/' . $observationliststring;
+		$url = $inatapi . 'observations?per_page=200&id=' . $observationliststring;
 		$inatdata = make_curl_request( $url );
 		if ( $inatdata && isset($inatdata['results']) && isset($inatdata['results'][0]) ) {
 			foreach ( $inatdata['results'] as $result ) {
