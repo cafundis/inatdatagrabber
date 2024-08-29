@@ -217,7 +217,7 @@ function get_observation_data( $observationlist ) {
 		$observationliststring = implode( ",", $observationlist );
 		$url = $inatapi . 'observations/' . $observationliststring;
 		$inatdata = make_curl_request( $url );
-		if ( $inatdata && $inatdata['results'] && $inatdata['results'][0] ) {
+		if ( $inatdata && isset($inatdata['results']) && isset($inatdata['results'][0]) ) {
 			foreach ( $inatdata['results'] as $result ) {
 				$data = [];
 				$data['id'] = $result['id'];
@@ -278,6 +278,7 @@ function get_observation_data( $observationlist ) {
 			return $allobservationdata;
 		} else {
 			$errors[] = 'No observations found via iNaturalist API.';
+			if ( $inatdata ) var_dump( $inatdata );
 			return [];
 		}
 	}
@@ -324,10 +325,15 @@ if ( $_POST ) {
 		// Put all the data into arrays based on the column
 		$rows = array_map( 'str_getcsv', file( $tmpName ) );
 		$header = array_shift( $rows );
-		foreach ( $rows as $row ) {
-			$indexed = array_combine( $header, $row );
-			// Build an observation list array based on the specified key field
-			$observationlist[] = $indexed[$field];
+		foreach ( $rows as $key => $row ) {
+			if ( count($header) === count($row) ) {
+				$indexed = array_combine( $header, $row );
+				// Build an observation list array based on the specified key field
+				$observationlist[] = $indexed[$field];
+			} else {
+				// Add 2 since the array starts at 0 and we did an array_shift
+				$errors[] = 'Line ' . ($key + 2) . ' has wrong number of fields in CSV file.';
+			}
 		}
 	}
 	if ( isset( $_POST['observations'] ) && $_POST['observations'] ) {
