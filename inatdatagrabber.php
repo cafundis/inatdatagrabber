@@ -226,9 +226,14 @@ function get_observation_data( $observationlist ) {
 				$data['user_name'] = $result['user']['name'];
 				$data['user_login'] = $result['user']['login'];
 				$data['description'] = $result['description'];
-				$location = explode( ',', $result['location'] );
-				$data['latitude'] = $location[0];
-				$data['longitude'] = $location[1];
+				if ( $result['location'] ) {
+					$location = explode( ',', $result['location'] );
+					$data['latitude'] = $location[0];
+					$data['longitude'] = $location[1];
+				} else {
+					$data['latitude'] = null;
+					$data['longitude'] = null;
+				}
 				if ( isset( $result['private_location'] ) ) {
 					$privatelocation = explode( ',', $result['private_location'] );
 					$data['private_latitude'] = $privatelocation[0];
@@ -238,9 +243,19 @@ function get_observation_data( $observationlist ) {
 					$data['private_longitude'] = null;
 				}
 				$data['coordinates_obscured'] = $result['geoprivacy'] ? 'true' : 'false';
-				$places = get_places( $result['place_ids'], $result['id'] );
-				if ( $places ) {
-					$data = array_merge( $data, $places );
+				if ( $result['place_ids'] ) {
+					$places = get_places( $result['place_ids'], $result['id'] );
+					if ( $places ) {
+						$data = array_merge( $data, $places );
+					} else {
+						$data['county'] = null;
+						$data['state'] = null;
+						$data['country'] = null;
+					}
+				} else {
+					$data['county'] = null;
+					$data['state'] = null;
+					$data['country'] = null;
 				}
 				$data['scientific_name'] = $result['taxon']['name'];
 				$taxonomy = get_taxonomy( $result['taxon']['ancestor_ids'], $result['id'] );
