@@ -258,9 +258,27 @@ function get_observation_data( $observationlist ) {
 					$data['country'] = null;
 				}
 				$data['scientific_name'] = $result['taxon']['name'];
-				$taxonomy = get_taxonomy( $result['taxon']['ancestor_ids'], $result['id'] );
-				if ( $taxonomy ) {
-					$data = array_merge( $data, $taxonomy );
+				if ( $result['taxon']['ancestor_ids'] ) {
+					$taxonomy = get_taxonomy( $result['taxon']['ancestor_ids'], $result['id'] );
+					if ( $taxonomy ) {
+						$data = array_merge( $data, $taxonomy );
+					} else {
+						$data['phylum'] = null;
+						$data['class'] = null;
+						$data['order'] = null;
+						$data['family'] = null;
+						$data['tribe'] = null;
+						$data['genus'] = null;
+						$data['species'] = null;
+					}
+				} else {
+					$data['phylum'] = null;
+					$data['class'] = null;
+					$data['order'] = null;
+					$data['family'] = null;
+					$data['tribe'] = null;
+					$data['genus'] = null;
+					$data['species'] = null;
 				}
 				if ( isset( $result['ofvs'] ) ) {
 					$ofvs = $result['ofvs'];
