@@ -16,7 +16,7 @@ $observationlistclean = []; // Array of iNaturalist observation IDs
 $observationdata = [];
 $datarequested = [];
 $maxrecords = 10000; // Per https://www.inaturalist.org/pages/api+recommended+practices
-$maxrecordsperrequest = 200; // Per v1 API limit
+$maxrecordsperrequest = 100; // Don't change this unless you have a good reason
 
 function make_curl_request( $url = null ) {
 	global $useragent, $token, $jwt, $errors;
