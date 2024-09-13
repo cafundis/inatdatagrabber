@@ -215,7 +215,7 @@ function get_observation_data( $observationlist ) {
 	if ( $observationlist ) {
 		$allobservationdata = [];
 		$observationliststring = implode( ",", $observationlist );
-		$url = $inatapi . 'observations?per_page=200&id=' . $observationliststring;
+		$url = $inatapi . 'observations?per_page=' . $maxrecordsperrequest . '&id=' . $observationliststring;
 		$inatdata = make_curl_request( $url );
 		if ( $inatdata && isset($inatdata['results']) && isset($inatdata['results'][0]) ) {
 			foreach ( $inatdata['results'] as $result ) {
@@ -308,6 +308,7 @@ function get_observation_data( $observationlist ) {
 				}
 				$allobservationdata[] = $data;
 			}
+			unset( $inatdata );
 			return $allobservationdata;
 		} else {
 			$errors[] = 'No observations found via iNaturalist API.';
