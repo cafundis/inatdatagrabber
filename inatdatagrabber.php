@@ -211,7 +211,7 @@ function get_observation_id( $observationkey, $keytype ) {
 }
 
 function get_observation_data( $observationlist ) {
-	global $inatapi, $jwt, $errors;
+	global $inatapi, $jwt, $errors, $maxrecordsperrequest;
 	if ( $observationlist ) {
 		$allobservationdata = [];
 		$observationliststring = implode( ",", $observationlist );
