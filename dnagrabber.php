@@ -324,7 +324,7 @@ if ( $response && isset( $response['access_token'] ) ) {
 	// Get JSON web token
 	$jwt = get_jwt();
 
-	while ( $keepprocessing && $batch < 3 ) {
+	while ( $keepprocessing ) {
 		process_batch();
 		$batch++;
 	}
