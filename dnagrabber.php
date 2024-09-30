@@ -221,59 +221,43 @@ function process_batch() {
 			$data['user_name'] = $result['user']['name'];
 			$data['user_login'] = $result['user']['login'];
 			$data['description'] = $result['description'];
+			$data['latitude'] = null;
+			$data['longitude'] = null;
 			if ( $result['location'] ) {
 				$location = explode( ',', $result['location'] );
 				$data['latitude'] = $location[0];
 				$data['longitude'] = $location[1];
-			} else {
-				$data['latitude'] = null;
-				$data['longitude'] = null;
 			}
+			$data['private_latitude'] = null;
+			$data['private_longitude'] = null;
 			if ( isset( $result['private_location'] ) ) {
 				$privatelocation = explode( ',', $result['private_location'] );
 				$data['private_latitude'] = $privatelocation[0];
 				$data['private_longitude'] = $privatelocation[1];
-			} else {
-				$data['private_latitude'] = null;
-				$data['private_longitude'] = null;
 			}
 			$data['coordinates_obscured'] = $result['geoprivacy'] ? 'true' : 'false';
+			$data['county'] = null;
+			$data['state'] = null;
+			$data['country'] = null;
 			if ( $result['place_ids'] ) {
 				$places = get_places( $result['place_ids'], $result['id'] );
 				if ( $places ) {
 					$data = array_merge( $data, $places );
-				} else {
-					$data['county'] = null;
-					$data['state'] = null;
-					$data['country'] = null;
 				}
-			} else {
-				$data['county'] = null;
-				$data['state'] = null;
-				$data['country'] = null;
 			}
 			$data['scientific_name'] = $result['taxon']['name'];
+			$data['phylum'] = null;
+			$data['class'] = null;
+			$data['order'] = null;
+			$data['family'] = null;
+			$data['tribe'] = null;
+			$data['genus'] = null;
+			$data['species'] = null;
 			if ( $result['taxon']['ancestor_ids'] ) {
 				$taxonomy = get_taxonomy( $result['taxon']['ancestor_ids'], $result['id'] );
 				if ( $taxonomy ) {
 					$data = array_merge( $data, $taxonomy );
-				} else {
-					$data['phylum'] = null;
-					$data['class'] = null;
-					$data['order'] = null;
-					$data['family'] = null;
-					$data['tribe'] = null;
-					$data['genus'] = null;
-					$data['species'] = null;
 				}
-			} else {
-				$data['phylum'] = null;
-				$data['class'] = null;
-				$data['order'] = null;
-				$data['family'] = null;
-				$data['tribe'] = null;
-				$data['genus'] = null;
-				$data['species'] = null;
 			}
 			if ( isset( $result['ofvs'] ) ) {
 				$ofvs = $result['ofvs'];
