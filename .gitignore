@@ -1,5 +1,6 @@
 .DS_store
 conf.php
+db.conf.php
 data
 log.txt
 observations.csv
