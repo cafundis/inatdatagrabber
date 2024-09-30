@@ -14,6 +14,10 @@ $jwt = null; // JSON web token
 $errors = [];
 $observationsinserted = 0;
 $maxrecordsperrequest = 100;
+$keepprocessing = true;
+$totalresults = 0;
+$batch = 1;
+$offset = 0;
 
 function make_curl_request( $url = null ) {
 	global $useragent, $token, $jwt, $errors;
@@ -190,33 +194,29 @@ function get_ofv( $ofvs, $fieldname ) {
 	return null;
 }
 
-print("------------------ SCRIPT STARTED ------------------\n");
-$start_time = microtime( true );
-
-// Get iNat auth token
-$response = iNat_auth_request( $app_id, $app_secret, $username, $password );
-if ( $response && isset( $response['access_token'] ) ) {
-	$token = $response['access_token'];
-	// Get JSON web token
-	$jwt = get_jwt();
-		
-	$url = $inatapi . 'observations?per_page=' . $maxrecordsperrequest . '&verifiable=any&place_id=any&field:DNA%20Barcode%20ITS';
+function process_batch() {
+	global $link, $inatapi, $errors, $observationsinserted, $maxrecordsperrequest, $keepprocessing, $totalresults, $batch, $offset;
+	$url = $inatapi . 'observations?per_page=' . $maxrecordsperrequest . '&verifiable=any&place_id=any&field:DNA%20Barcode%20ITS&order_by=id&order=asc&id_above=' . $offset;
 	$inatdata = make_curl_request( $url );
 	if ( $inatdata && isset($inatdata['results']) && isset($inatdata['results'][0]) ) {
+		if ( !$totalresults ) $totalresults = $inatdata['total_results'];
+		print( "Processing batch ".$batch." of ".ceil($totalresults/$maxrecordsperrequest)."...\n" );
 		$fields = [ 'id', 'date', 'user_name', 'user_login', 'description', 'latitude', 'longitude', 
 			'private_latitude', 'private_longitude', 'coordinates_obscured', 'county', 'state', 'country',
 			'scientific_name', 'phylum', 'class', 'order', 'family', 'tribe', 'genus', 'species',
 			'accession_number', 'fundis_tag_number', 'microscopy_requested', 'mycomap_blast_results',
-			'mycoportal_link', 'provisional_species_name', 'voucher_number', 'voucher_numbers', 'dna_barcode_its',
-			'dna_barcode_its_2', 'dna_barcode_lsu' ];
+			'mycoportal_link', 'provisional_species_name', 'voucher_number', 'voucher_numbers', 
+			'dna_barcode_its', 'dna_barcode_its_2', 'dna_barcode_lsu' ];
 		$quotedfields = [];
 		foreach ( $fields as $field ) {
 			$quotedfields[] = '`' . $field . '`';
 		}
 		$quotedfieldsstring = implode( ', ', $quotedfields );
+		if ( count( $inatdata['results'] ) < $maxrecordsperrequest ) $keepprocessing = false;
 		foreach ( $inatdata['results'] as $result ) {
 			$data = [];
 			$data['id'] = $result['id'];
+			$offset = $result['id'];
 			$data['date'] = $result['observed_on_details']['date'];
 			$data['user_name'] = $result['user']['name'];
 			$data['user_login'] = $result['user']['login'];
@@ -306,22 +306,47 @@ if ( $response && isset( $response['access_token'] ) ) {
 				$escapedvalues[] = "'" . mysqli_real_escape_string( $link, $data[$field] ) . "'";
 			}
 			$escapedvaluesstring = implode( ', ', $escapedvalues );
-			$query = "INSERT INTO `inatimported` (".$quotedfieldsstring.") VALUES (".$escapedvaluesstring.");";
+			$updatevalues = [];
+			foreach ( $fields as $field ) {
+				$updatevalues[] = "`" . $field . "` = '" . mysqli_real_escape_string( $link, $data[$field] ) . "'";
+			}
+			$updatevaluesstring = implode( ', ', $updatevalues );
+			$query = "INSERT INTO `inatimported` (".$quotedfieldsstring.") VALUES (".$escapedvaluesstring.") " .
+			"ON DUPLICATE KEY UPDATE ".$updatevaluesstring.";";
 			$result = mysqli_query( $link, $query );
 			if ( $result ) {
 				$observationsinserted++;
 			} else {
-				$errors[] = "Inserting record failed.";
+				$errors[] = "Inserting record ".$data['id']." failed.";
 				$errors[] = mysqli_error( $link );
 			}
 		}
 	} else {
 		$errors[] = 'No observations found via iNaturalist API.';
+		$keepprocessing = false;
 	}
 	unset( $inatdata );
+	sleep(1);
+	return true;
 }
 
-print( $observationsinserted . " observations inserted.\n" );
+print("------------------ SCRIPT STARTED ------------------\n");
+$start_time = microtime( true );
+
+// Get iNat auth token
+$response = iNat_auth_request( $app_id, $app_secret, $username, $password );
+if ( $response && isset( $response['access_token'] ) ) {
+	$token = $response['access_token'];
+	// Get JSON web token
+	$jwt = get_jwt();
+
+	while ( $keepprocessing && $batch < 3 ) {
+		process_batch();
+		$batch++;
+	}
+}
+
+print( $observationsinserted . " observations inserted or updated.\n" );
 
 if ( $errors ) {
 	print( "Errors:\n" );
