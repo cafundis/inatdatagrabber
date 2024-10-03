@@ -17,7 +17,6 @@ $maxrecordsperrequest = 100;
 $keepprocessing = true;
 $totalresults = 0;
 $batch = 1;
-$offset = 0;
 
 function make_curl_request( $url = null ) {
 	global $useragent, $token, $jwt, $errors;
@@ -200,7 +199,7 @@ function process_batch() {
 	$inatdata = make_curl_request( $url );
 	if ( $inatdata && isset($inatdata['results']) && isset($inatdata['results'][0]) ) {
 		if ( !$totalresults ) $totalresults = $inatdata['total_results'];
-		print( "Processing batch ".$batch." of ".ceil($totalresults/$maxrecordsperrequest)."...\n" );
+		print( "Processing batch ".$batch." of ".ceil($totalresults/$maxrecordsperrequest)." (from record ".$offset.")...\n" );
 		$fields = [ 'id', 'date', 'user_name', 'user_login', 'description', 'latitude', 'longitude', 
 			'private_latitude', 'private_longitude', 'coordinates_obscured', 'county', 'state', 'country',
 			'scientific_name', 'phylum', 'class', 'order', 'family', 'tribe', 'genus', 'species',
@@ -316,6 +315,13 @@ function process_batch() {
 
 print("------------------ SCRIPT STARTED ------------------\n");
 $start_time = microtime( true );
+
+// Allow overriding the offset.
+if ( isset( $argv[1] ) ) {
+	$offset = $argv[1];
+} else {
+	$offset = 0;
+}
 
 // Get iNat auth token
 $response = iNat_auth_request( $app_id, $app_secret, $username, $password );
