@@ -11,6 +11,7 @@ $inatapi = 'https://api.inaturalist.org/v1/';
 $token = null;
 $jwt = null; // JSON web token
 $errors = [];
+$errordata = null;
 $observationlist = []; // Array of submitted observation keys
 $observationlistclean = []; // Array of iNaturalist observation IDs
 $observationdata = [];
@@ -137,7 +138,7 @@ function get_places( $placeids, $observationid ) {
 }
 
 function get_taxonomy( $ancestorids, $observationid ) {
-	global $inatapi, $errors;
+	global $inatapi, $errors, $errordata;
 	$ancestorlist = implode( ',', $ancestorids );
 	$url = $inatapi . 'taxa/' . $ancestorlist;
 	$inatdata = make_curl_request( $url );
@@ -179,6 +180,9 @@ function get_taxonomy( $ancestorids, $observationid ) {
 		return $taxonomy;
 	} else {
 		$errors[] = 'Taxonomy not found for observation ' . $observationid . '.';
+		if ( $inatdata ) {
+			$errordata = $inatdata;
+		}
 		return null;
 	}
 }
@@ -500,6 +504,10 @@ if ( $errors ) {
 	print( 'Errors:<br/>' );
 	foreach ( $errors as $error ) {
 		print( $error . '<br/>' );
+	}
+	if ( $errordata ) {
+		print( 'Error data:<br/>' );
+		var_dump($errordata);
 	}
 	print( '</p>' );
 }
