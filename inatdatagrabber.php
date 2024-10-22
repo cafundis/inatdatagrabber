@@ -338,8 +338,7 @@ function get_observation_data( $observationlist ) {
 				}
 				$allobservationdata[] = $data;
 				print( '<script>$("#progressbar").attr( "value", $("#progressbar").attr( "value" ) + 1 );</script>' );
-				flush(); 
-				usleep(300000);
+				//usleep(300000);
 			}
 			unset( $inatdata );
 			return $allobservationdata;
@@ -470,8 +469,6 @@ if ( $_POST ) {
 			}
 			if ( $observationlistclean ) {
 				print( '<script>$("#progressbar").attr( "max", ' . count( $observationlistclean ) . ' );</script>' );
-				ob_flush();
-				flush();
 				// Split into chunks for batched requests
 				$chunkedobservationlist = array_chunk( $observationlistclean, $maxrecordsperrequest );
 				foreach ( $chunkedobservationlist as $observationlistchunk ) {
@@ -528,6 +525,5 @@ if ( count($observationsfound) > 0 ) {
 	print( '<p>Output file: <a href="data/inatdata.csv">inatdata.csv</a></p>' );
 }
 print( '<p>&nbsp;</p><p><a href="index.html">New Request</a></p>' );
-print ob_get_level ();
 print( '</div></body></html>' );
 ?>
