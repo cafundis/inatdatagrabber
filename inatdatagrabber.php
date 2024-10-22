@@ -468,6 +468,7 @@ if ( $_POST ) {
 			}
 			if ( $observationlistclean ) {
 				print( '<script>$("#progressbar").attr( "max", ' . count( $observationlistclean ) . ' );</script>' );
+				ob_flush();
 				flush();
 				// Split into chunks for batched requests
 				$chunkedobservationlist = array_chunk( $observationlistclean, $maxrecordsperrequest );
