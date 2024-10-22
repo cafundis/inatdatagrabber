@@ -2,16 +2,43 @@
 // This script is dual licensed under the MIT License and the CC0 License.
 error_reporting( E_ALL );
 ini_set( 'display_errors', 1 );
-ini_set( 'max_execution_time', 900 );
+ini_set( 'max_execution_time', 0 );
 
 include 'conf.php';
+?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Language" content="en-us">
+	<meta charset="UTF-8">
+	<title>iNatDataGrabber</title>
 
+<style type="text/css">
+body {
+	font-family: "Trebuchet MS", Verdana, sans-serif;
+	color:#777777;
+	background: #FFFFFF;
+	}
+#content {
+	margin: 2em;
+	}
+#errors {
+	margin: 1em;
+	color: #FF6666;
+	font-weight: bold;
+	}
+</style>
+<script src="./jquery.min.js"></script>
+</head>
+<body>
+<div id="content">
+<label for="progressbar">Progress:</label>
+<progress style="width:300px;" id="progressbar" max="100" value="0"></progress>
+<?php
 $useragent = 'iNatDataGrabber/1.0';
 $inatapi = 'https://api.inaturalist.org/v1/';
 $token = null;
 $jwt = null; // JSON web token
 $errors = [];
-$errordata = null;
 $observationlist = []; // Array of submitted observation keys
 $observationlistclean = []; // Array of iNaturalist observation IDs
 $observationdata = [];
@@ -41,11 +68,11 @@ function make_curl_request( $url = null ) {
 			if ( $object ) {
 				return json_decode( json_encode( $object ), true );
 			} else {
-				$errors[] = 'API request failed. ' . curl_error( $curl );
+				$errors[] = 'API request failed. (No output object.) ' . curl_error( $curl );
 				return null;
 			}
 		} else {
-			$errors[] = 'API request failed. ' . curl_error( $curl );
+			$errors[] = 'API request failed. (No output from curl_exec.)' . curl_error( $curl );
 			return null;
 		}
 	} else {
@@ -180,9 +207,6 @@ function get_taxonomy( $ancestorids, $observationid ) {
 		return $taxonomy;
 	} else {
 		$errors[] = 'Taxonomy not found for observation ' . $observationid . '.';
-		if ( $inatdata ) {
-			$errordata = $inatdata;
-		}
 		return null;
 	}
 }
@@ -311,6 +335,9 @@ function get_observation_data( $observationlist ) {
 					$data['dna_barcode_lsu'] = null;
 				}
 				$allobservationdata[] = $data;
+				print( '<script>$("#progressbar").attr( "value", $("#progressbar").attr( "value" ) + 1 );</script>' );
+				flush(); 
+				usleep(300000);
 			}
 			unset( $inatdata );
 			return $allobservationdata;
@@ -440,6 +467,8 @@ if ( $_POST ) {
 				}
 			}
 			if ( $observationlistclean ) {
+				print( '<script>$("#progressbar").attr( "max", ' . count( $observationlistclean ) . ' );</script>' );
+				flush();
 				// Split into chunks for batched requests
 				$chunkedobservationlist = array_chunk( $observationlistclean, $maxrecordsperrequest );
 				foreach ( $chunkedobservationlist as $observationlistchunk ) {
@@ -453,32 +482,7 @@ if ( $_POST ) {
 		}
 	}
 }
-?>
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-	<meta http-equiv="Content-Language" content="en-us">
-	<meta charset="UTF-8">
-	<title>iNatDataGrabber</title>
 
-<style type="text/css">
-body {
-	font-family: "Trebuchet MS", Verdana, sans-serif;
-	color:#777777;
-	background: #FFFFFF;
-	}
-#content {
-	margin: 2em;
-	}
-#errors {
-	margin: 1em;
-	color: #FF6666;
-	font-weight: bold;
-	}
-</style>
-</head>
-<body>
-<div id="content">
-<?php
 $observationsfound = [];
 if ( $observationdata ) {
 	$fh = fopen( './data/inatdata.csv', 'w' );
@@ -521,7 +525,5 @@ if ( count($observationsfound) > 0 ) {
 	print( '<p>Output file: <a href="data/inatdata.csv">inatdata.csv</a></p>' );
 }
 print( '<p>&nbsp;</p><p><a href="index.html">New Request</a></p>' );
+print( '</div></body></html>' );
 ?>
-</div>
-</body>
-</html>
