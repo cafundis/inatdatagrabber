@@ -3,12 +3,14 @@
 error_reporting( E_ALL );
 ini_set( 'display_errors', 1 );
 ini_set( 'max_execution_time', 0 );
+ob_implicit_flush(true);
 
 include 'conf.php';
 ?>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 	<meta http-equiv="Content-Language" content="en-us">
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 	<meta charset="UTF-8">
 	<title>iNatDataGrabber</title>
 
@@ -526,5 +528,6 @@ if ( count($observationsfound) > 0 ) {
 	print( '<p>Output file: <a href="data/inatdata.csv">inatdata.csv</a></p>' );
 }
 print( '<p>&nbsp;</p><p><a href="index.html">New Request</a></p>' );
+print ob_get_level ();
 print( '</div></body></html>' );
 ?>
