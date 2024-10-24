@@ -33,8 +33,8 @@ body {
 </head>
 <body>
 <div id="content">
-<label for="progressbar">Progress:</label>
-<progress style="width:300px;" id="progressbar" max="100" value="0"></progress>
+<!--<label for="progressbar">Progress:</label>
+<progress style="width:300px;" id="progressbar" max="100" value="0"></progress>-->
 <?php
 $useragent = 'iNatDataGrabber/1.0';
 $inatapi = 'https://api.inaturalist.org/v1/';
@@ -337,8 +337,8 @@ function get_observation_data( $observationlist ) {
 					$data['dna_barcode_lsu'] = null;
 				}
 				$allobservationdata[] = $data;
-				print( '<script>$("#progressbar").attr( "value", $("#progressbar").attr( "value" ) + 1 );</script>' );
-				//usleep(300000);
+				//print( '<script>$("#progressbar").attr( "value", $("#progressbar").attr( "value" ) + 1 );</script>' );
+				usleep(500000);
 			}
 			unset( $inatdata );
 			return $allobservationdata;
@@ -468,7 +468,7 @@ if ( $_POST ) {
 				}
 			}
 			if ( $observationlistclean ) {
-				print( '<script>$("#progressbar").attr( "max", ' . count( $observationlistclean ) . ' );</script>' );
+				//print( '<script>$("#progressbar").attr( "max", ' . count( $observationlistclean ) . ' );</script>' );
 				// Split into chunks for batched requests
 				$chunkedobservationlist = array_chunk( $observationlistclean, $maxrecordsperrequest );
 				foreach ( $chunkedobservationlist as $observationlistchunk ) {
